@@ -1,0 +1,5 @@
+{
+  "name": "Dev Task Manager AI",
+  "description": "A card-based system for developers to manage tasks, with AI-powered documentation generation for Requirements, Specs, Pre-Dev Analysis, and Test Cases. All data is stored locally in your browser using IndexedDB.",
+  "requestFramePermissions": []
+}
