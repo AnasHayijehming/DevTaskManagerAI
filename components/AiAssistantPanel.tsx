@@ -1,13 +1,14 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Chat } from '@google/genai';
 import { db } from '../services/db';
-import { generatePreDevAnalysis, generateTestCases, createRequirementChat, continueRequirementChat } from '../services/geminiService';
+import { generatePreDevAnalysis, generateTestCases, createRequirementChat, continueRequirementChat, isApiKeyAvailable } from '../services/geminiService';
 import { DevTaskCardData, RequirementChatMessage } from '../types';
 import AiButton from './AiButton';
-import { InformationCircleIcon, SparklesIcon, BookOpenIcon } from './icons/Icons';
+import { InformationCircleIcon, SparklesIcon, BookOpenIcon, KeyIcon } from './icons/Icons';
 import ChatInterface from './ChatInterface';
 import Spinner from './Spinner';
 
@@ -44,6 +45,23 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
         setChat(null);
     }
   }, [cardData.requirementChatHistory]); 
+
+  if (!isApiKeyAvailable()) {
+    return (
+        <aside className="w-96 flex-shrink-0 border-l border-slate-200 bg-white p-4 flex flex-col gap-4">
+            <h3 className="text-lg font-semibold text-slate-800 text-center mb-0 flex-shrink-0">AI Assistant</h3>
+            <div className="flex flex-col items-center justify-center text-center h-full gap-4 p-6 bg-amber-50 rounded-xl border border-amber-200">
+                <div className="p-3 bg-white rounded-full border border-slate-200 shadow-sm">
+                    <KeyIcon className="w-7 h-7 text-amber-600" />
+                </div>
+                <h4 className="text-lg font-semibold text-slate-800">API Key Missing</h4>
+                <p className="text-sm text-slate-600 max-w-xs">
+                    The Gemini API key is not configured. Please set the <code>API_KEY</code> environment variable to enable all AI features.
+                </p>
+            </div>
+        </aside>
+    );
+  }
 
   const augmentPromptWithContext = async (originalPrompt: string): Promise<string> => {
     if (!cardData.knowledgeFileIds || cardData.knowledgeFileIds.length === 0 || !allKnowledgeFiles) {

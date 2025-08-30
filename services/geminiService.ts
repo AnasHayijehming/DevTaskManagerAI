@@ -1,10 +1,22 @@
 
+
+
 import { GoogleGenAI, Type, GenerateContentResponse, Chat, Content } from '@google/genai';
 import { PreDevAnalysis, TestCase, TestCaseStatus, RequirementChatMessage } from '../types';
 
-// Fix: Per Gemini API guidelines, initialize client with API key from environment variables.
+// Per Gemini API guidelines, initialize client with API key from environment variables.
 // The API key's availability is assumed to be handled externally.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const apiKey = process.env.API_KEY;
+const ai = new GoogleGenAI({ apiKey: apiKey! });
+
+/**
+ * Checks if the Gemini API key is available in the environment variables.
+ * @returns {boolean} True if the API key is set, false otherwise.
+ */
+export const isApiKeyAvailable = (): boolean => {
+  return !!apiKey;
+};
+
 
 export interface AiChatResponse {
   flag: 'question' | 'answer' | 'error';
@@ -18,13 +30,18 @@ Your process is as follows:
 2. Please ask questions to get complete information, but ask them one at a time and in Thai.
 3. Once you have a clear understanding, provide a comprehensive technical specification as the final answer. **This final specification MUST ALWAYS be in English.**
 
+**Specification requirements:**
+- The specification should be well-structured, using Markdown for formatting.
+- It **must** include a dedicated section at the end titled "## Edge Cases & Error Handling".
+- In this section, you should suggest potential edge cases, failure modes, and error handling scenarios that the developer should consider to make the implementation more robust.
+
 **IMPORTANT:** You MUST ALWAYS respond in a specific JSON format. Do not add any text outside of the JSON object.
 
 - If you are asking a question, use this format (the content can be in Thai if the user initiated in Thai):
 {"flag": "question", "content": "Your single question here."}
 
 - If you are providing the final technical specification, use this format (the content MUST be in English):
-{"flag": "answer", "content": "The complete technical specification here."}`;
+{"flag": "answer", "content": "The complete technical specification here, including the 'Edge Cases & Error Handling' section."}`;
 
 export const createRequirementChat = (history?: RequirementChatMessage[]): Chat => {
   const filteredHistory = history?.filter(msg => !msg.text.includes('**Specification Generated**'));
