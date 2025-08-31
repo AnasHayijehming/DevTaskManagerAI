@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { InformationCircleIcon } from './icons/Icons';
 import Tooltip from './Tooltip';
 import EditPreviewToggle from './EditPreviewToggle';
+import Mermaid from './Mermaid';
 
 interface RequirementSpecTabProps {
   requirement: string;
@@ -15,6 +16,20 @@ interface RequirementSpecTabProps {
 
 const inputStyles = "w-full p-3 bg-white text-slate-800 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-shadow shadow-sm";
 const previewStyles = "prose max-w-none p-4 border border-slate-300 rounded-md bg-white min-h-[150px] shadow-sm";
+
+const markdownComponents = {
+  code({node, inline, className, children, ...props}: any) {
+    const match = /language-(\w+)/.exec(className || '');
+    if (!inline && match && match[1] === 'mermaid') {
+      return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+    }
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  }
+};
 
 const RequirementSpecTab: React.FC<RequirementSpecTabProps> = ({
   requirement,
@@ -43,7 +58,7 @@ const RequirementSpecTab: React.FC<RequirementSpecTabProps> = ({
             />
         ) : (
             <div className={previewStyles}>
-                {requirement ? <ReactMarkdown>{requirement}</ReactMarkdown> : <p className="text-slate-500 italic">No requirement content to preview.</p>}
+                {requirement ? <ReactMarkdown components={markdownComponents}>{requirement}</ReactMarkdown> : <p className="text-slate-500 italic">No requirement content to preview.</p>}
             </div>
         )}
       </div>
@@ -77,7 +92,7 @@ const RequirementSpecTab: React.FC<RequirementSpecTabProps> = ({
             />
         ) : (
             <div className={`${previewStyles} min-h-[300px]`}>
-                {spec ? <ReactMarkdown>{spec}</ReactMarkdown> : <p className="text-slate-500 italic">No spec content to preview.</p>}
+                {spec ? <ReactMarkdown components={markdownComponents}>{spec}</ReactMarkdown> : <p className="text-slate-500 italic">No spec content to preview.</p>}
             </div>
         )}
       </div>

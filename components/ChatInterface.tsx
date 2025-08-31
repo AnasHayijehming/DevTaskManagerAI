@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { RequirementChatMessage } from '../types';
+import Mermaid from './Mermaid';
 
 interface ChatInterfaceProps {
   history: RequirementChatMessage[];
@@ -10,6 +11,20 @@ interface ChatInterfaceProps {
   onSendMessage: (message: string) => Promise<void>;
   isChatActive: boolean;
 }
+
+const markdownComponents = {
+  code({node, inline, className, children, ...props}: any) {
+    const match = /language-(\w+)/.exec(className || '');
+    if (!inline && match && match[1] === 'mermaid') {
+      return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+    }
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  }
+};
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ history, isLoading, onSendMessage, isChatActive }) => {
     const [userResponse, setUserResponse] = useState('');
@@ -65,7 +80,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ history, isLoading, onSen
                         <div key={index} className={`flex flex-col max-w-[85%] ${isUser ? 'self-end items-end' : 'self-start items-start'}`}>
                             <div className={`px-3 py-2 shadow-sm text-sm w-fit ${messageBubbleClasses} ${messageBorderRadius}`}>
                                 <div className="prose prose-sm max-w-none prose-p:my-0" style={{color: 'inherit'}}>
-                                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                    <ReactMarkdown components={markdownComponents}>{msg.text}</ReactMarkdown>
                                 </div>
                             </div>
                         </div>

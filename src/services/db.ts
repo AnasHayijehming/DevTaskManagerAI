@@ -1,3 +1,4 @@
+
 import Dexie, { Table } from 'dexie';
 import { DevTaskCard, Status, DevTaskCardData, KnowledgeFile, Tag } from '../types';
 
@@ -13,6 +14,7 @@ export class DevTaskManagerDB extends Dexie {
     // indexes are handled correctly.
 
     // Version 1: Initial schema
+    // FIX: Cast `this` to Dexie to resolve issue where `version` method is not found on subclass.
     (this as Dexie).version(1).stores({
       cards: '++id, title, status, createdAt, updatedAt',
     });
@@ -20,6 +22,7 @@ export class DevTaskManagerDB extends Dexie {
     // Version 2: Adds knowledge base.
     // We redeclare the 'cards' table schema, adding an index for `knowledgeFileIds`,
     // and add the new 'knowledgeFiles' table.
+    // FIX: Cast `this` to Dexie to resolve issue where `version` method is not found on subclass.
     (this as Dexie).version(2).stores({
       cards: '++id, title, status, createdAt, updatedAt, *knowledgeFileIds',
       knowledgeFiles: '++id, name, createdAt',
@@ -36,6 +39,7 @@ export class DevTaskManagerDB extends Dexie {
     // Version 3: Adds tags.
     // We redeclare all existing tables and add the new 'tags' table.
     // We also add an index for `tagIds` on the cards table for efficient queries.
+    // FIX: Cast `this` to Dexie to resolve issue where `version` method is not found on subclass.
     (this as Dexie).version(3).stores({
       cards: '++id, title, status, createdAt, updatedAt, *knowledgeFileIds, *tagIds',
       knowledgeFiles: '++id, name, createdAt',

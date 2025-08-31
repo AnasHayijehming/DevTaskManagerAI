@@ -3,8 +3,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, addTag, deleteTag } from '../services/db';
 import { useApiKey } from '../hooks/useApiKey';
 import { useModelSettings } from '../hooks/useModelSettings';
-import { TAG_COLORS, TAG_COLOR_CLASSES, AVAILABLE_MODELS } from '../constants';
-import { XMarkIcon, TrashIcon, KeyIcon, TagIcon, EyeIcon, EyeSlashIcon } from './icons/Icons';
+import { useOpenAiApiKey } from '../hooks/useOpenAiApiKey';
+import { useOpenAiModelSettings } from '../hooks/useOpenAiModelSettings';
+import { useAiProvider, AiProvider } from '../hooks/useAiProvider';
+import { TAG_COLORS, TAG_COLOR_CLASSES, GEMINI_MODELS, OPENAI_MODELS } from '../constants';
+import { XMarkIcon, TrashIcon, KeyIcon, TagIcon, EyeIcon, EyeSlashIcon, CpuChipIcon } from './icons/Icons';
 
 type SettingsTab = 'api-key' | 'tags';
 
@@ -13,88 +16,144 @@ interface SettingsModalProps {
   initialTab?: SettingsTab;
 }
 
-const ApiKeySettings: React.FC = () => {
-  const [currentApiKey, saveApiKey] = useApiKey();
-  const [inputValue, setInputValue] = useState(currentApiKey);
-  const [saveFeedback, setSaveFeedback] = useState(false);
-  const [model, saveModel] = useModelSettings();
-  const [isKeyVisible, setIsKeyVisible] = useState(false);
+const ApiKeyAndModelSettings: React.FC = () => {
+  const [provider, setProvider] = useAiProvider();
 
-  const handleSave = () => {
-    saveApiKey(inputValue);
-    setSaveFeedback(true);
-    setTimeout(() => setSaveFeedback(false), 2000);
+  const [geminiApiKey, saveGeminiApiKey] = useApiKey();
+  const [geminiModel, saveGeminiModel] = useModelSettings();
+  
+  const [openAiApiKey, saveOpenAiApiKey] = useOpenAiApiKey();
+  const [openAiModel, saveOpenAiModel] = useOpenAiModelSettings();
+
+  const [geminiInputValue, setGeminiInputValue] = useState(geminiApiKey);
+  const [openAiInputValue, setOpenAiInputValue] = useState(openAiApiKey);
+
+  const [isGeminiKeyVisible, setIsGeminiKeyVisible] = useState(false);
+  const [isOpenAiKeyVisible, setIsOpenAiKeyVisible] = useState(false);
+  
+  const [saveFeedback, setSaveFeedback] = useState('');
+
+  const handleSaveKey = (providerToSave: AiProvider) => {
+    if (providerToSave === 'gemini') {
+        saveGeminiApiKey(geminiInputValue);
+    } else {
+        saveOpenAiApiKey(openAiInputValue);
+    }
+    setSaveFeedback(`${providerToSave === 'gemini' ? 'Gemini' : 'OpenAI'} key saved!`);
+    setTimeout(() => setSaveFeedback(''), 2000);
   };
-
+  
   return (
     <div>
-        <h3 className="text-xl font-bold text-slate-800 mb-2">Gemini API Key</h3>
-        <p className="text-slate-600 mb-6 text-sm">
-          Your API key is stored securely in your browser's local storage and is never sent to our servers. Get your key from Google AI Studio.
-        </p>
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="api-key-input" className="block text-sm font-medium text-slate-700 mb-1">
-              API Key
-            </label>
-            <div className="relative w-full max-w-sm">
-              <input
-                id="api-key-input"
-                type={isKeyVisible ? 'text' : 'password'}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 pr-10"
-                placeholder="Enter your Gemini API Key"
-              />
-              <button
-                type="button"
-                onClick={() => setIsKeyVisible(!isKeyVisible)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-700"
-                aria-label={isKeyVisible ? 'Hide API key' : 'Show API key'}
-              >
-                {isKeyVisible ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-900 transition-colors"
-            >
-              Save Key
-            </button>
-            {saveFeedback && <span className="text-sm text-emerald-600 font-medium">Saved!</span>}
-          </div>
-        </div>
-        <div className="mt-8 pt-6 border-t border-slate-200">
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Model Configuration</h3>
+        <div className="mb-8">
+            <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+                <CpuChipIcon />
+                <span>AI Provider</span>
+            </h3>
             <p className="text-slate-600 mb-4 text-sm">
-                Choose the AI model for generating content. Using the latest models ensures the best performance and quality.
+                Choose your preferred AI provider for all generative features.
             </p>
-            <fieldset className="space-y-2 max-w-sm">
-                <legend className="sr-only">AI Model Selection</legend>
-                {AVAILABLE_MODELS.map((m) => (
-                    <label key={m.id} className={`flex p-3 border rounded-lg cursor-pointer transition-colors duration-200 ${
-                        model === m.id
-                            ? 'bg-sky-50 border-sky-300 ring-2 ring-sky-200'
-                            : 'bg-white border-slate-200 hover:bg-slate-50'
-                    }`}>
-                        <input
-                            type="radio"
-                            name="model-selection"
-                            value={m.id}
-                            checked={model === m.id}
-                            onChange={() => saveModel(m.id)}
-                            className="h-4 w-4 mt-1 text-sky-600 focus:ring-sky-500 border-slate-400"
-                        />
-                        <div className="ml-3 text-sm">
-                            <span className="font-semibold text-slate-800">{m.name}</span>
-                            <p className="text-slate-600">{m.description}</p>
-                        </div>
-                    </label>
+            <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-lg max-w-sm">
+                {(['gemini', 'openai'] as AiProvider[]).map(p => (
+                    <button
+                        key={p}
+                        onClick={() => setProvider(p)}
+                        className={`w-1/2 px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 whitespace-nowrap ${
+                            provider === p
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'bg-transparent text-slate-600 hover:bg-white/60'
+                        }`}
+                    >
+                        {p === 'gemini' ? 'Google Gemini' : 'OpenAI (ChatGPT)'}
+                    </button>
                 ))}
-            </fieldset>
-      </div>
+            </div>
+        </div>
+
+        {provider === 'gemini' && (
+            <div className="animate-fade-in">
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Google Gemini Settings</h3>
+                <p className="text-slate-600 mb-6 text-sm">
+                    Your API key is stored in your browser's local storage. Get your key from Google AI Studio.
+                </p>
+                <div className="space-y-4 mb-8">
+                    <div>
+                        <label htmlFor="gemini-api-key" className="block text-sm font-medium text-slate-700 mb-1">API Key</label>
+                        <div className="relative w-full max-w-sm">
+                            <input id="gemini-api-key" type={isGeminiKeyVisible ? 'text' : 'password'} value={geminiInputValue} onChange={(e) => setGeminiInputValue(e.target.value)} className="w-full input-field pr-10" placeholder="Enter your Gemini API Key"/>
+                            <button type="button" onClick={() => setIsGeminiKeyVisible(v => !v)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-700" aria-label="Toggle key visibility">
+                                {isGeminiKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => handleSaveKey('gemini')} className="btn-primary">Save Key</button>
+                        {saveFeedback && <span className="text-sm text-emerald-600 font-medium">{saveFeedback}</span>}
+                    </div>
+                </div>
+                <div>
+                    <h4 className="text-lg font-semibold text-slate-800 mb-2">Model Configuration</h4>
+                    <fieldset className="space-y-2 max-w-sm">
+                        {GEMINI_MODELS.map((m) => (
+                            <label key={m.id} className={`flex p-3 border rounded-lg cursor-pointer ${geminiModel === m.id ? 'active-selection' : 'inactive-selection'}`}>
+                                <input type="radio" name="gemini-model" value={m.id} checked={geminiModel === m.id} onChange={() => saveGeminiModel(m.id)} className="h-4 w-4 mt-1 radio-input"/>
+                                <div className="ml-3 text-sm">
+                                    <span className="font-semibold text-slate-800">{m.name}</span>
+                                    <p className="text-slate-600">{m.description}</p>
+                                </div>
+                            </label>
+                        ))}
+                    </fieldset>
+                </div>
+            </div>
+        )}
+
+        {provider === 'openai' && (
+             <div className="animate-fade-in">
+                <h3 className="text-xl font-bold text-slate-800 mb-2">OpenAI (ChatGPT) Settings</h3>
+                <p className="text-slate-600 mb-6 text-sm">
+                    Your API key is stored in your browser's local storage. Get your key from your OpenAI account dashboard.
+                </p>
+                 <div className="space-y-4 mb-8">
+                    <div>
+                        <label htmlFor="openai-api-key" className="block text-sm font-medium text-slate-700 mb-1">API Key</label>
+                        <div className="relative w-full max-w-sm">
+                            <input id="openai-api-key" type={isOpenAiKeyVisible ? 'text' : 'password'} value={openAiInputValue} onChange={(e) => setOpenAiInputValue(e.target.value)} className="w-full input-field pr-10" placeholder="Enter your OpenAI API Key"/>
+                            <button type="button" onClick={() => setIsOpenAiKeyVisible(v => !v)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-700" aria-label="Toggle key visibility">
+                                {isOpenAiKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => handleSaveKey('openai')} className="btn-primary">Save Key</button>
+                        {saveFeedback && <span className="text-sm text-emerald-600 font-medium">{saveFeedback}</span>}
+                    </div>
+                </div>
+                <div>
+                    <h4 className="text-lg font-semibold text-slate-800 mb-2">Model Configuration</h4>
+                    <fieldset className="space-y-2 max-w-sm">
+                        {OPENAI_MODELS.map((m) => (
+                             <label key={m.id} className={`flex p-3 border rounded-lg cursor-pointer ${openAiModel === m.id ? 'active-selection' : 'inactive-selection'}`}>
+                                <input type="radio" name="openai-model" value={m.id} checked={openAiModel === m.id} onChange={() => saveOpenAiModel(m.id)} className="h-4 w-4 mt-1 radio-input"/>
+                                <div className="ml-3 text-sm">
+                                    <span className="font-semibold text-slate-800">{m.name}</span>
+                                    <p className="text-slate-600">{m.description}</p>
+                                </div>
+                            </label>
+                        ))}
+                    </fieldset>
+                </div>
+            </div>
+        )}
+        <style>{`
+          .btn-primary { @apply px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-900 transition-colors; }
+          .input-field { @apply px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500; }
+          .radio-input { @apply text-sky-600 focus:ring-sky-500 border-slate-400; }
+          .active-selection { @apply bg-sky-50 border-sky-300 ring-2 ring-sky-200; }
+          .inactive-selection { @apply bg-white border-slate-200 hover:bg-slate-50; }
+          .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+          @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        `}</style>
     </div>
   );
 };
@@ -186,13 +245,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, initialTab = 'ap
     }, [initialTab]);
 
     const navItems: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-        { id: 'api-key', label: 'API Key', icon: <KeyIcon className="w-5 h-5"/> },
+        { id: 'api-key', label: 'API Key & Model', icon: <KeyIcon className="w-5 h-5"/> },
         { id: 'tags', label: 'Tags', icon: <TagIcon className="w-5 h-5" /> },
     ];
 
     return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[70vh] flex" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex" onClick={e => e.stopPropagation()}>
         <aside className="w-1/4 border-r border-slate-200 p-4 bg-slate-50/50 rounded-l-lg">
             <h2 className="text-lg font-bold text-slate-800 mb-6 px-2">Settings</h2>
             <nav className="flex flex-col gap-1">
@@ -216,7 +275,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, initialTab = 'ap
              <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-slate-200" aria-label="Close">
                 <XMarkIcon className="w-6 h-6 text-slate-600" />
             </button>
-            {activeTab === 'api-key' && <ApiKeySettings />}
+            {activeTab === 'api-key' && <ApiKeyAndModelSettings />}
             {activeTab === 'tags' && <TagManagementSettings />}
         </main>
       </div>

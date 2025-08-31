@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Chat } from '@google/genai';
 import { db } from '../services/db';
-import { generatePreDevAnalysis, generateTestCases, createRequirementChat, continueRequirementChat } from '../services/geminiService';
-import { DevTaskCardData, RequirementChatMessage } from '../types';
-import { useApiKey } from '../hooks/useApiKey';
+import { generatePreDevAnalysis, generateTestCases, continueRequirementChat, isApiKeyAvailable } from '../services/aiService';
+// FIX: Import DevTaskCard to use its type which includes the 'id' property.
+import { DevTaskCard, DevTaskCardData, RequirementChatMessage } from '../types';
+import { useAiProvider } from '../hooks/useAiProvider';
 import AiButton from './AiButton';
 import { InformationCircleIcon, SparklesIcon, BookOpenIcon, KeyIcon } from './icons/Icons';
 import ChatInterface from './ChatInterface';
@@ -13,47 +14,32 @@ import Tooltip from './Tooltip';
 
 interface AiAssistantPanelProps {
   activeTab: string;
-  cardData: DevTaskCardData;
+  // FIX: Change cardData type from DevTaskCardData to DevTaskCard to include the 'id' property.
+  cardData: DevTaskCard;
   onUpdate: (data: Partial<DevTaskCardData>) => void;
   onOpenSettingsModal: (tab: 'api-key' | 'tags') => void;
 }
 
 const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData, onUpdate, onOpenSettingsModal }) => {
   const [isAiLoading, setAiLoading] = useState<Record<string, boolean>>({});
-  
-  const [chat, setChat] = useState<Chat | null>(null);
   const [isChatLoading, setChatLoading] = useState(false);
-  const [apiKey] = useApiKey();
+  const [keyAvailable, setKeyAvailable] = useState(isApiKeyAvailable());
+  const [provider] = useAiProvider();
 
   const allKnowledgeFiles = useLiveQuery(() => db.knowledgeFiles.toArray(), []);
-
+  
+  // Re-check for API key when the modal is opened or the provider changes
   useEffect(() => {
-    // If there's no API key, don't attempt to initialize the chat.
-    if (!apiKey) {
-      setChat(null);
-      return;
-    }
+    setKeyAvailable(isApiKeyAvailable());
+  }, [cardData.id, provider]);
 
-    const history = cardData.requirementChatHistory || [];
-    if (history.length > 0) {
-        const isSpecGeneratedMessage = (msg: RequirementChatMessage) => msg.role === 'model' && msg.text.includes('**Specification Generated**');
-        const specGenerated = history.some(isSpecGeneratedMessage);
+  const isSpecGenerated = (cardData.requirementChatHistory || []).some(
+    msg => msg.role === 'model' && msg.text.includes('**Specification Generated**')
+  );
 
-        if (!specGenerated) {
-            const lastMessage = history[history.length - 1];
-            if (lastMessage && lastMessage.role === 'model' && !lastMessage.isError) {
-                const newChat = createRequirementChat(history);
-                setChat(newChat);
-            }
-        } else {
-            setChat(null);
-        }
-    } else {
-        setChat(null);
-    }
-  }, [cardData.requirementChatHistory, apiKey]); 
+  const isChatActive = !isSpecGenerated && cardData.requirementChatHistory && cardData.requirementChatHistory.length > 0;
 
-  if (!apiKey) {
+  if (!keyAvailable) {
     return (
         <aside className="w-96 flex-shrink-0 border-l border-slate-200 bg-white p-4 flex flex-col gap-4">
             <h3 className="text-lg font-semibold text-slate-800 text-center mb-0 flex-shrink-0">AI Assistant</h3>
@@ -63,7 +49,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
                 </div>
                 <h4 className="text-lg font-semibold text-slate-800">API Key Required</h4>
                 <p className="text-sm text-slate-600 max-w-xs">
-                    Please set your Gemini API key to enable AI-powered features. Your key is saved locally in your browser.
+                    Please set your API key for the selected AI provider ({provider}) to enable AI features.
                 </p>
                 <button
                     onClick={() => onOpenSettingsModal('api-key')}
@@ -102,30 +88,19 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
       return;
     }
     setChatLoading(true);
-    const newChat = createRequirementChat();
-    if (!newChat) {
-      alert("Failed to initialize chat. Is the API key correct?");
-      setChatLoading(false);
-      return;
-    }
-    setChat(newChat);
-
-    let fullContext = `Task Title: ${cardData.title || 'Untitled'}\n\n`;
-    fullContext += `Requirement:\n---\n${cardData.requirement}\n---\n\n`;
     
-    const initialUserMessage = `Here is the complete context for a task I want to build. Please analyze all of it, ask clarifying questions if needed, and then generate a comprehensive technical spec: \n\n${fullContext}`;
+    const initialUserMessage = `Here is the context for a task. Please analyze it, ask clarifying questions if needed, and then generate a comprehensive technical spec. My initial requirement is: "${cardData.requirement}"`;
     const initialHistory: RequirementChatMessage[] = [{ role: 'user', text: cardData.requirement }];
     onUpdate({ requirementChatHistory: initialHistory });
 
     try {
         const augmentedMessage = await augmentPromptWithContext(initialUserMessage);
-        const response = await continueRequirementChat(newChat, augmentedMessage);
+        const response = await continueRequirementChat([], augmentedMessage);
         
         const newMessages: RequirementChatMessage[] = [{ role: 'model', text: response.content, isError: response.flag === 'error' }];
 
         if (response.flag === 'answer') {
             onUpdate({ spec: response.content });
-            setChat(null);
             newMessages.push({ role: 'model', text: `**Specification Generated**` });
         }
         onUpdate({ requirementChatHistory: [...initialHistory, ...newMessages] });
@@ -140,8 +115,6 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
   };
 
   const handleContinueChat = async (message: string) => {
-    if (!chat) return;
-
     setChatLoading(true);
     const userMessage: RequirementChatMessage = { role: 'user', text: message };
     const historyWithUserMessage = [...(cardData.requirementChatHistory || []), userMessage];
@@ -149,12 +122,12 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
 
     try {
         const augmentedMessage = await augmentPromptWithContext(message);
-        const response = await continueRequirementChat(chat, augmentedMessage);
+        // Pass the history *before* the new user message to the service
+        const response = await continueRequirementChat(cardData.requirementChatHistory || [], augmentedMessage);
         const modelMessages: RequirementChatMessage[] = [{ role: 'model', text: response.content, isError: response.flag === 'error' }];
 
         if (response.flag === 'answer') {
             onUpdate({ spec: response.content });
-            setChat(null);
             modelMessages.push({ role: 'model', text: `**Specification Generated**` });
         }
 
@@ -288,10 +261,6 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
   };
 
   const renderActionContent = () => {
-    const isSpecGenerated = (cardData.requirementChatHistory || []).some(
-        msg => msg.role === 'model' && msg.text.includes('**Specification Generated**')
-    );
-
     switch (activeTab) {
       case 'Requirement & Spec':
         return (
@@ -303,7 +272,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
                     text="Clarify & Generate Spec" 
                     onClick={handleStartChat} 
                     isLoading={isChatLoading} 
-                    disabled={!!chat || isSpecGenerated}
+                    disabled={isChatActive || isSpecGenerated}
                   />
                 </div>
               </Tooltip>
@@ -312,7 +281,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
               history={cardData.requirementChatHistory || []}
               isLoading={isChatLoading}
               onSendMessage={handleContinueChat}
-              isChatActive={!!chat}
+              isChatActive={isChatActive}
             />
           </div>
         );

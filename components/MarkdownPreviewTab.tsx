@@ -3,10 +3,25 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { CopyIcon } from './icons/Icons';
+import Mermaid from './Mermaid';
 
 interface MarkdownPreviewTabProps {
   markdownContent: string;
 }
+
+const markdownComponents = {
+  code({node, inline, className, children, ...props}: any) {
+    const match = /language-(\w+)/.exec(className || '');
+    if (!inline && match && match[1] === 'mermaid') {
+      return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+    }
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  }
+};
 
 const MarkdownPreviewTab: React.FC<MarkdownPreviewTabProps> = ({ markdownContent }) => {
   const copyMarkdown = () => {
@@ -24,7 +39,7 @@ const MarkdownPreviewTab: React.FC<MarkdownPreviewTabProps> = ({ markdownContent
         </button>
       </div>
       <div className="prose prose-slate max-w-none p-6 border rounded-lg bg-white prose-pre:bg-slate-100 prose-pre:border prose-pre:rounded-md prose-th:bg-slate-50">
-        <ReactMarkdown>{markdownContent}</ReactMarkdown>
+        <ReactMarkdown components={markdownComponents}>{markdownContent}</ReactMarkdown>
       </div>
     </div>
   );

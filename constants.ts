@@ -52,12 +52,25 @@ export const TAG_COLOR_CLASSES: Record<string, { bg: string, text: string, hover
     rose: { bg: 'bg-rose-100', text: 'text-rose-600', hoverBg: 'hover:bg-rose-200', hoverText: 'hover:text-rose-800', border: 'border-rose-300' },
 };
 
-export const AVAILABLE_MODELS = [
+export const GEMINI_MODELS = [
     {
         id: 'gemini-2.5-flash',
         name: 'Gemini 2.5 Flash',
         description: 'The latest, fastest, and most capable model for general tasks.'
     }
 ];
+export const DEFAULT_GEMINI_MODEL = GEMINI_MODELS[0].id;
 
-export const DEFAULT_MODEL = AVAILABLE_MODELS[0].id;
+export const OPENAI_MODELS = [
+    {
+        id: 'gpt-4o',
+        name: 'GPT-4o',
+        description: "OpenAI's latest and most advanced model."
+    },
+    {
+        id: 'gpt-4-turbo',
+        name: 'GPT-4 Turbo',
+        description: 'High-performance model for large-scale tasks.'
+    }
+];
+export const DEFAULT_OPENAI_MODEL = OPENAI_MODELS[0].id;

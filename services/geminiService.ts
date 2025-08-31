@@ -2,7 +2,7 @@ import { GoogleGenAI, Type, GenerateContentResponse, Chat, Content } from '@goog
 import { PreDevAnalysis, TestCase, TestCaseStatus, RequirementChatMessage } from '../types';
 import { API_KEY_STORAGE_KEY } from '../hooks/useApiKey';
 import { MODEL_STORAGE_KEY } from '../hooks/useModelSettings';
-import { DEFAULT_MODEL } from '../constants';
+import { DEFAULT_GEMINI_MODEL } from '../constants';
 
 
 let aiClient: GoogleGenAI | null = null;
@@ -45,10 +45,10 @@ const getAiClient = (): GoogleGenAI | null => {
 const getModel = (): string => {
     try {
         const storedModel = localStorage.getItem(MODEL_STORAGE_KEY);
-        return storedModel || DEFAULT_MODEL;
+        return storedModel || DEFAULT_GEMINI_MODEL;
     } catch (e) {
         console.error("Could not access localStorage", e);
-        return DEFAULT_MODEL;
+        return DEFAULT_GEMINI_MODEL;
     }
 };
 

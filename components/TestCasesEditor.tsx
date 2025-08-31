@@ -4,6 +4,7 @@ import { TestCase, TestCaseStatus } from '../types';
 import { TEST_CASE_STATUS_COLORS } from '../constants';
 import { PlusIcon, TrashIcon } from './icons/Icons';
 import EditPreviewToggle from './EditPreviewToggle';
+import Mermaid from './Mermaid';
 
 interface TestCasesEditorProps {
   testCases: TestCase[];
@@ -16,6 +17,20 @@ type ViewModes = {
     input: ColumnViewMode;
     expectedResult: ColumnViewMode;
 }
+
+const markdownComponents = {
+  code({node, inline, className, children, ...props}: any) {
+    const match = /language-(\w+)/.exec(className || '');
+    if (!inline && match && match[1] === 'mermaid') {
+      return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+    }
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  }
+};
 
 const TestCasesEditor: React.FC<TestCasesEditorProps> = ({ testCases, onChange }) => {
     const [viewModes, setViewModes] = useState<ViewModes>({
@@ -57,7 +72,7 @@ const TestCasesEditor: React.FC<TestCasesEditorProps> = ({ testCases, onChange }
         if (viewModes[field] === 'preview') {
         return (
             <div className={previewStyles}>
-            {tc[field] ? <ReactMarkdown>{tc[field]}</ReactMarkdown> : <p className="text-slate-500 italic">Not specified.</p>}
+            {tc[field] ? <ReactMarkdown components={markdownComponents}>{tc[field]}</ReactMarkdown> : <p className="text-slate-500 italic">Not specified.</p>}
             </div>
         );
         }

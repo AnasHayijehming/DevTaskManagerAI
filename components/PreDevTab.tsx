@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { PreDevAnalysis } from '../types';
 import EditPreviewToggle from './EditPreviewToggle';
+import Mermaid from './Mermaid';
 
 interface PreDevTabProps {
   preDevAnalysis: PreDevAnalysis;
@@ -16,6 +17,20 @@ type ViewModes = {
   impactAnalysis: 'edit' | 'preview';
   howToCode: 'edit' | 'preview';
   testApproach: 'edit' | 'preview';
+};
+
+const markdownComponents = {
+  code({node, inline, className, children, ...props}: any) {
+    const match = /language-(\w+)/.exec(className || '');
+    if (!inline && match && match[1] === 'mermaid') {
+      return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+    }
+    return (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  }
 };
 
 const PreDevTab: React.FC<PreDevTabProps> = ({ preDevAnalysis, onPreDevChange }) => {
@@ -57,7 +72,7 @@ const PreDevTab: React.FC<PreDevTabProps> = ({ preDevAnalysis, onPreDevChange })
             />
           ) : (
             <div className={`${previewStyles} ${minHeight}`}>
-              {preDevAnalysis[key] ? <ReactMarkdown>{preDevAnalysis[key]}</ReactMarkdown> : <p className="text-slate-500 italic">Not specified.</p>}
+              {preDevAnalysis[key] ? <ReactMarkdown components={markdownComponents}>{preDevAnalysis[key]}</ReactMarkdown> : <p className="text-slate-500 italic">Not specified.</p>}
             </div>
           )}
         </div>

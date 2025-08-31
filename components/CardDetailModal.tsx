@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { DevTaskCard, Status, DevTaskCardData, PreDevAnalysis, TestCase, Tag } from '../types';
 import { TABS, TAG_COLOR_CLASSES } from '../constants';
-import { generateTitle } from '../services/geminiService';
+import { generateTitle } from '../services/aiService';
 import Tooltip from './Tooltip';
 
 import TabButton from './TabButton';
@@ -137,7 +137,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, onClose, onUpda
     setIsTitleGenerating(true);
     try {
       const result = await generateTitle(localCard.requirement);
-      if (result.startsWith("Error") || result.startsWith("API Key not set")) {
+      if (result.startsWith("Error") || result.includes("API Key not set")) {
         alert(result);
       } else {
         handleFieldChange({ title: result });
