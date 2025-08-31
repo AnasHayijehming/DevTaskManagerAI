@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../services/db';
-import { generatePreDevAnalysis, generateTestCases, continueRequirementChat, isApiKeyAvailable } from '../services/aiService';
-// FIX: Import DevTaskCard to use its type which includes the 'id' property.
+import { continueRequirementChat, isApiKeyAvailable, generatePreDevAnalysis, generateTestCases } from '../services/aiService';
 import { DevTaskCard, DevTaskCardData, RequirementChatMessage } from '../types';
 import { useAiProvider } from '../hooks/useAiProvider';
 import AiButton from './AiButton';
@@ -11,10 +10,10 @@ import { InformationCircleIcon, SparklesIcon, BookOpenIcon, KeyIcon } from './ic
 import ChatInterface from './ChatInterface';
 import Spinner from './Spinner';
 import Tooltip from './Tooltip';
+import ProcessIndicator from './ProcessIndicator';
 
 interface AiAssistantPanelProps {
   activeTab: string;
-  // FIX: Change cardData type from DevTaskCardData to DevTaskCard to include the 'id' property.
   cardData: DevTaskCard;
   onUpdate: (data: Partial<DevTaskCardData>) => void;
   onOpenSettingsModal: (tab: 'api-key' | 'tags') => void;
@@ -264,7 +263,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
     switch (activeTab) {
       case 'Requirement & Spec':
         return (
-          <div className="flex flex-col flex-grow min-h-0 gap-4">
+          <div className="flex flex-col flex-grow min-h-0 gap-2">
             <div className="flex justify-center flex-shrink-0">
               <Tooltip text="Starts an interactive chat with the AI to refine your requirement and then generates a detailed technical specification.">
                 <div>
@@ -277,6 +276,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
                 </div>
               </Tooltip>
             </div>
+            {isChatLoading && (cardData.requirementChatHistory || []).length === 1 && <ProcessIndicator />}
             <ChatInterface
               history={cardData.requirementChatHistory || []}
               isLoading={isChatLoading}
