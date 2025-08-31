@@ -1,7 +1,6 @@
-
 import { useState, useEffect, useCallback } from 'react';
 
-const API_KEY_STORAGE_KEY = 'gemini_api_key';
+export const API_KEY_STORAGE_KEY = 'gemini_api_key';
 
 export const useApiKey = (): [string, (key: string) => void] => {
   const [apiKey, setApiKey] = useState('');

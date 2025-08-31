@@ -1,32 +1,39 @@
-
-
-
 import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Chat } from '@google/genai';
 import { db } from '../services/db';
-import { generatePreDevAnalysis, generateTestCases, createRequirementChat, continueRequirementChat, isApiKeyAvailable } from '../services/geminiService';
+import { generatePreDevAnalysis, generateTestCases, createRequirementChat, continueRequirementChat } from '../services/geminiService';
 import { DevTaskCardData, RequirementChatMessage } from '../types';
+import { useApiKey } from '../hooks/useApiKey';
 import AiButton from './AiButton';
 import { InformationCircleIcon, SparklesIcon, BookOpenIcon, KeyIcon } from './icons/Icons';
 import ChatInterface from './ChatInterface';
 import Spinner from './Spinner';
+import Tooltip from './Tooltip';
 
 interface AiAssistantPanelProps {
   activeTab: string;
   cardData: DevTaskCardData;
   onUpdate: (data: Partial<DevTaskCardData>) => void;
+  onOpenSettingsModal: (tab: 'api-key' | 'tags') => void;
 }
 
-const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData, onUpdate }) => {
+const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData, onUpdate, onOpenSettingsModal }) => {
   const [isAiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   
   const [chat, setChat] = useState<Chat | null>(null);
   const [isChatLoading, setChatLoading] = useState(false);
+  const [apiKey] = useApiKey();
 
   const allKnowledgeFiles = useLiveQuery(() => db.knowledgeFiles.toArray(), []);
 
   useEffect(() => {
+    // If there's no API key, don't attempt to initialize the chat.
+    if (!apiKey) {
+      setChat(null);
+      return;
+    }
+
     const history = cardData.requirementChatHistory || [];
     if (history.length > 0) {
         const isSpecGeneratedMessage = (msg: RequirementChatMessage) => msg.role === 'model' && msg.text.includes('**Specification Generated**');
@@ -44,9 +51,9 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
     } else {
         setChat(null);
     }
-  }, [cardData.requirementChatHistory]); 
+  }, [cardData.requirementChatHistory, apiKey]); 
 
-  if (!isApiKeyAvailable()) {
+  if (!apiKey) {
     return (
         <aside className="w-96 flex-shrink-0 border-l border-slate-200 bg-white p-4 flex flex-col gap-4">
             <h3 className="text-lg font-semibold text-slate-800 text-center mb-0 flex-shrink-0">AI Assistant</h3>
@@ -54,10 +61,16 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
                 <div className="p-3 bg-white rounded-full border border-slate-200 shadow-sm">
                     <KeyIcon className="w-7 h-7 text-amber-600" />
                 </div>
-                <h4 className="text-lg font-semibold text-slate-800">API Key Missing</h4>
+                <h4 className="text-lg font-semibold text-slate-800">API Key Required</h4>
                 <p className="text-sm text-slate-600 max-w-xs">
-                    The Gemini API key is not configured. Please set the <code>API_KEY</code> environment variable to enable all AI features.
+                    Please set your Gemini API key to enable AI-powered features. Your key is saved locally in your browser.
                 </p>
+                <button
+                    onClick={() => onOpenSettingsModal('api-key')}
+                    className="mt-4 px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-900 transition-colors"
+                >
+                    Set API Key
+                </button>
             </div>
         </aside>
     );
@@ -90,6 +103,11 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
     }
     setChatLoading(true);
     const newChat = createRequirementChat();
+    if (!newChat) {
+      alert("Failed to initialize chat. Is the API key correct?");
+      setChatLoading(false);
+      return;
+    }
     setChat(newChat);
 
     let fullContext = `Task Title: ${cardData.title || 'Untitled'}\n\n`;
@@ -208,12 +226,16 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
             <p className="text-sm text-slate-600 max-w-xs">{description}</p>
           </div>
           <div className="mt-2">
-              <AiButton 
-                  text={buttonText} 
-                  onClick={onAction} 
-                  isLoading={isLoading} 
-                  disabled={disabled}
-              />
+            <Tooltip text={description}>
+                <div>
+                    <AiButton 
+                        text={buttonText} 
+                        onClick={onAction} 
+                        isLoading={isLoading} 
+                        disabled={disabled}
+                    />
+                </div>
+            </Tooltip>
           </div>
       </div>
   );
@@ -275,12 +297,16 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
         return (
           <div className="flex flex-col flex-grow min-h-0 gap-4">
             <div className="flex justify-center flex-shrink-0">
-              <AiButton 
-                text="Clarify & Generate Spec" 
-                onClick={handleStartChat} 
-                isLoading={isChatLoading} 
-                disabled={!!chat || isSpecGenerated}
-              />
+              <Tooltip text="Starts an interactive chat with the AI to refine your requirement and then generates a detailed technical specification.">
+                <div>
+                  <AiButton 
+                    text="Clarify & Generate Spec" 
+                    onClick={handleStartChat} 
+                    isLoading={isChatLoading} 
+                    disabled={!!chat || isSpecGenerated}
+                  />
+                </div>
+              </Tooltip>
             </div>
             <ChatInterface
               history={cardData.requirementChatHistory || []}

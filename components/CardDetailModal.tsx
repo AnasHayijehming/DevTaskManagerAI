@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { DevTaskCard, Status, DevTaskCardData, PreDevAnalysis, TestCase, Tag } from '../types';
 import { TABS, TAG_COLOR_CLASSES } from '../constants';
@@ -23,6 +19,7 @@ interface CardDetailModalProps {
   onUpdate: (id: number, data: Partial<DevTaskCardData>) => void;
   onDelete: (id: number) => void;
   allTags: Tag[];
+  onOpenSettingsModal: (tab: 'api-key' | 'tags') => void;
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
@@ -48,7 +45,7 @@ const SaveStatusIndicator: React.FC<{ status: SaveStatus }> = ({ status }) => {
   return null;
 };
 
-const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, onClose, onUpdate, onDelete, allTags }) => {
+const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, onClose, onUpdate, onDelete, allTags, onOpenSettingsModal }) => {
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [localCard, setLocalCard] = useState<DevTaskCard>(card);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -320,6 +317,7 @@ ${localCard.testCases.length > 0 ? localCard.testCases.map((tc, i) => `
             activeTab={activeTab}
             cardData={localCard}
             onUpdate={handleFieldChange}
+            onOpenSettingsModal={onOpenSettingsModal}
           />
         </div>
       </div>

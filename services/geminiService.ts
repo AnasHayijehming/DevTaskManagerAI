@@ -1,20 +1,53 @@
-
-
-
 import { GoogleGenAI, Type, GenerateContentResponse, Chat, Content } from '@google/genai';
 import { PreDevAnalysis, TestCase, TestCaseStatus, RequirementChatMessage } from '../types';
+import { API_KEY_STORAGE_KEY } from '../hooks/useApiKey';
+import { MODEL_STORAGE_KEY } from '../hooks/useModelSettings';
+import { DEFAULT_MODEL } from '../constants';
 
-// Per Gemini API guidelines, initialize client with API key from environment variables.
-// The API key's availability is assumed to be handled externally.
-const apiKey = process.env.API_KEY;
-const ai = new GoogleGenAI({ apiKey: apiKey! });
 
 /**
- * Checks if the Gemini API key is available in the environment variables.
+ * Retrieves the AI client instance, configured with the API key from local storage.
+ * @returns {GoogleGenAI | null} An initialized GoogleGenAI client or null if the API key is not found.
+ */
+const getAiClient = (): GoogleGenAI | null => {
+    try {
+        const apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+        if (!apiKey) {
+            return null;
+        }
+        return new GoogleGenAI({ apiKey });
+    } catch (e) {
+        console.error("Could not access localStorage or initialize AI client", e);
+        return null;
+    }
+};
+
+/**
+ * Retrieves the selected AI model from local storage.
+ * @returns {string} The selected model ID, or the default model if none is set.
+ */
+const getModel = (): string => {
+    try {
+        const storedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+        return storedModel || DEFAULT_MODEL;
+    } catch (e) {
+        console.error("Could not access localStorage", e);
+        return DEFAULT_MODEL;
+    }
+};
+
+
+/**
+ * Checks if the Gemini API key is available in local storage.
  * @returns {boolean} True if the API key is set, false otherwise.
  */
 export const isApiKeyAvailable = (): boolean => {
-  return !!apiKey;
+  try {
+    return !!localStorage.getItem(API_KEY_STORAGE_KEY);
+  } catch (e) {
+    console.error("Could not access localStorage", e);
+    return false;
+  }
 };
 
 
@@ -43,7 +76,10 @@ Your process is as follows:
 - If you are providing the final technical specification, use this format (the content MUST be in English):
 {"flag": "answer", "content": "The complete technical specification here, including the 'Edge Cases & Error Handling' section."}`;
 
-export const createRequirementChat = (history?: RequirementChatMessage[]): Chat => {
+export const createRequirementChat = (history?: RequirementChatMessage[]): Chat | null => {
+  const ai = getAiClient();
+  if (!ai) return null;
+
   const filteredHistory = history?.filter(msg => !msg.text.includes('**Specification Generated**'));
 
   const geminiHistory: Content[] | undefined = filteredHistory?.map(msg => ({
@@ -52,12 +88,10 @@ export const createRequirementChat = (history?: RequirementChatMessage[]): Chat 
   }));
 
   const chat = ai.chats.create({
-    model: 'gemini-2.5-flash',
+    model: getModel(),
     history: geminiHistory,
     config: {
       systemInstruction,
-      // Fix: Add responseMimeType and responseSchema to ensure valid JSON output from the AI,
-      // preventing parsing errors due to unescaped control characters like newlines.
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -90,7 +124,7 @@ export const continueRequirementChat = async (
         }
     } catch (error) {
         console.error("Gemini Chat Error or JSON parse error:", error);
-        const userFriendlyError = "I'm sorry, but I encountered an issue communicating with the AI. This could be a temporary problem. Please try sending your message again. If the problem persists, the AI's response might be in an unexpected format.";
+        const userFriendlyError = "I'm sorry, but I encountered an issue communicating with the AI. This could be a temporary problem with the API or your API key. Please try again. If the problem persists, the AI's response might be in an unexpected format.";
         return {
             flag: 'error',
             content: userFriendlyError
@@ -99,6 +133,9 @@ export const continueRequirementChat = async (
 }
 
 export const generatePreDevAnalysis = async (spec: string): Promise<PreDevAnalysis | string> => {
+    const ai = getAiClient();
+    if (!ai) return "API Key not set. Please set it via the key icon in the header.";
+
     const prompt = `Based on the following technical specification, generate a comprehensive pre-development analysis. Provide the output as a JSON object.
 
 Specification:
@@ -108,7 +145,7 @@ ${spec}
     
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: getModel(),
             contents: prompt,
             config: {
                 responseMimeType: 'application/json',
@@ -133,6 +170,9 @@ ${spec}
 };
 
 export const generateTestCases = async (spec: string): Promise<TestCase[] | string> => {
+    const ai = getAiClient();
+    if (!ai) return "API Key not set. Please set it via the key icon in the header.";
+    
     const prompt = `Based on the following technical specification, generate between 5 and 10 relevant test cases. Provide the output as a JSON array of objects.
 
 Specification:
@@ -142,7 +182,7 @@ ${spec}
     
     try {
         const response: GenerateContentResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: getModel(),
             contents: prompt,
             config: {
                 responseMimeType: 'application/json',

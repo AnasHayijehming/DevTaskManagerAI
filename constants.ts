@@ -51,3 +51,13 @@ export const TAG_COLOR_CLASSES: Record<string, { bg: string, text: string, hover
     pink: { bg: 'bg-pink-100', text: 'text-pink-600', hoverBg: 'hover:bg-pink-200', hoverText: 'hover:text-pink-800', border: 'border-pink-300' },
     rose: { bg: 'bg-rose-100', text: 'text-rose-600', hoverBg: 'hover:bg-rose-200', hoverText: 'hover:text-rose-800', border: 'border-rose-300' },
 };
+
+export const AVAILABLE_MODELS = [
+    {
+        id: 'gemini-2.5-flash',
+        name: 'Gemini 2.5 Flash',
+        description: 'The latest, fastest, and most capable model for general tasks.'
+    }
+];
+
+export const DEFAULT_MODEL = AVAILABLE_MODELS[0].id;
