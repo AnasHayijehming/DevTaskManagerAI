@@ -229,3 +229,31 @@ ${spec}
         return `Error generating test cases: ${error instanceof Error ? error.message : String(error)}`;
     }
 };
+
+
+export const generateTitle = async (requirement: string): Promise<string> => {
+    const ai = getAiClient();
+    if (!ai) return "API Key not set. Please set it via the settings in the header.";
+
+    const prompt = `Based on the following requirement, generate a short, descriptive title for a development task (under 10 words).
+    
+Requirement:
+---
+${requirement}
+---
+
+Return only the title text, with no extra formatting, quotation marks, or labels like "Title:".`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: getModel(),
+            contents: prompt,
+        });
+        
+        // Trim and remove any potential surrounding quotes.
+        return response.text.trim().replace(/^"|"$/g, '');
+    } catch (error) {
+        console.error("Gemini API Error (generateTitle):", error);
+        return `Error generating title: ${error instanceof Error ? error.message : String(error)}`;
+    }
+};

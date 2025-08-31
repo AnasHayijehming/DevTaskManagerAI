@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { DevTaskCard, Status, DevTaskCardData, PreDevAnalysis, TestCase, Tag } from '../types';
 import { TABS, TAG_COLOR_CLASSES } from '../constants';
+import { generateTitle } from '../services/geminiService';
+import Tooltip from './Tooltip';
 
 import TabButton from './TabButton';
 import TestCasesEditor from './TestCasesEditor';
-import { TrashIcon, XMarkIcon, ArrowDownTrayIcon, CheckIcon, PlusIcon } from './icons/Icons';
+import { TrashIcon, XMarkIcon, ArrowDownTrayIcon, CheckIcon, PlusIcon, SparklesIcon } from './icons/Icons';
 import Spinner from './Spinner';
 
 // New component imports
@@ -51,6 +53,7 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, onClose, onUpda
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [isTagSelectorOpen, setTagSelectorOpen] = useState(false);
   const tagSelectorRef = useRef<HTMLDivElement>(null);
+  const [isTitleGenerating, setIsTitleGenerating] = useState(false);
 
   
   const hasUnsavedChanges = useMemo(() => JSON.stringify(localCard) !== JSON.stringify(card), [localCard, card]);
@@ -124,6 +127,27 @@ const CardDetailModal: React.FC<CardDetailModalProps> = ({ card, onClose, onUpda
       ? currentTagIds.filter(id => id !== tagId)
       : [...currentTagIds, tagId];
     handleFieldChange({ tagIds: newTagIds });
+  };
+
+  const handleGenerateTitle = async () => {
+    if (!localCard.requirement.trim()) {
+      alert("Please write a requirement before generating a title.");
+      return;
+    }
+    setIsTitleGenerating(true);
+    try {
+      const result = await generateTitle(localCard.requirement);
+      if (result.startsWith("Error") || result.startsWith("API Key not set")) {
+        alert(result);
+      } else {
+        handleFieldChange({ title: result });
+      }
+    } catch (error) {
+      console.error("Failed to generate title:", error);
+      alert("An unexpected error occurred while generating the title.");
+    } finally {
+      setIsTitleGenerating(false);
+    }
   };
   
   const cardTags = useMemo(() => {
@@ -220,13 +244,27 @@ ${localCard.testCases.length > 0 ? localCard.testCases.map((tc, i) => `
         <header className="p-4 border-b border-slate-200 flex-shrink-0 bg-white">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-grow min-w-0">
-              <input 
-                  type="text"
-                  value={localCard.title}
-                  onChange={e => handleFieldChange({ title: e.target.value })}
-                  className="text-xl font-bold text-slate-900 bg-transparent focus:outline-none focus:ring-1 focus:ring-sky-500 rounded-md px-2 py-1 w-full"
-                  placeholder="Card Title"
-              />
+               <div className="relative">
+                 <input 
+                    type="text"
+                    value={localCard.title}
+                    onChange={e => handleFieldChange({ title: e.target.value })}
+                    className="text-xl font-bold text-slate-900 bg-transparent focus:outline-none focus:ring-1 focus:ring-sky-500 rounded-md px-2 py-1 w-full pr-10"
+                    placeholder="Card Title"
+                 />
+                 <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                    <Tooltip text={!localCard.requirement.trim() ? "Add a requirement to generate a title" : "Generate title with AI"}>
+                        <button
+                            onClick={handleGenerateTitle}
+                            disabled={!localCard.requirement.trim() || isTitleGenerating}
+                            className="p-1 text-sky-500 rounded-full hover:bg-sky-100 disabled:text-slate-300 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                            aria-label="Generate title with AI"
+                        >
+                            {isTitleGenerating ? <Spinner className="w-5 h-5 text-slate-500" /> : <SparklesIcon className="w-5 h-5" />}
+                        </button>
+                    </Tooltip>
+                 </div>
+              </div>
               <div className="mt-3 flex items-center gap-2 flex-wrap pl-2">
                 {cardTags.map(tag => {
                   const colorClasses = TAG_COLOR_CLASSES[tag.color] || TAG_COLOR_CLASSES.slate;
