@@ -4,9 +4,52 @@ import { API_KEY_STORAGE_KEY } from '../hooks/useApiKey';
 import { MODEL_STORAGE_KEY } from '../hooks/useModelSettings';
 import { DEFAULT_GEMINI_MODEL } from '../constants';
 
+// Define temperature constants directly here
+export const GEMINI_TEMPERATURE_STORAGE_KEY = 'gemini_temperature';
+export const DEFAULT_GEMINI_TEMPERATURE = 0.7;
+
 
 let aiClient: GoogleGenAI | null = null;
 let lastUsedApiKey: string | null = null;
+
+/**
+ * Creates a user-friendly error message from a Gemini API error.
+ * @param {unknown} error - The error caught from the API call.
+ * @param {string} context - The context of the action (e.g., 'AI Chat', 'Pre-Dev Analysis').
+ * @returns {string} A user-friendly error message.
+ */
+function handleGeminiError(error: unknown, context: string): string {
+    console.error(`Gemini API Error in ${context}:`, error);
+
+    if (error instanceof SyntaxError) {
+        return `Error in ${context}: The AI's response was not in the expected format (invalid JSON). Please try again.`;
+    }
+
+    if (error instanceof Error) {
+        const message = error.message.toLowerCase();
+
+        if (message.includes('api key not valid')) {
+            return `Error in ${context}: Your Gemini API key is invalid or expired. Please check it in the settings.`;
+        }
+        if (message.includes('[400') || message.includes('bad request')) {
+            return `Error in ${context}: The request was rejected by the AI. This can happen if the input is unsafe, too long, or invalid.`;
+        }
+        if (message.includes('[429]') || message.includes('rate limit')) {
+            return `Error in ${context}: You've exceeded the API rate limit. Please wait a moment and try again.`;
+        }
+        if (message.includes('[500]') || message.includes('[503]') || message.includes('service unavailable')) {
+            return `Error in ${context}: The AI service is currently unavailable. Please try again later.`;
+        }
+        if (message.includes('fetch') || message.includes('network')) {
+            return `Error in ${context}: A network error occurred. Please check your internet connection.`;
+        }
+
+        // Generic error message from the SDK
+        return `Error in ${context}: ${error.message}`;
+    }
+    
+    return `An unknown error occurred in ${context}.`;
+}
 
 /**
  * Retrieves a cached AI client instance, configured with the API key from local storage.
@@ -49,6 +92,24 @@ const getModel = (): string => {
     } catch (e) {
         console.error("Could not access localStorage", e);
         return DEFAULT_GEMINI_MODEL;
+    }
+};
+
+/**
+ * Retrieves the selected AI temperature from local storage.
+ * @returns {number} The selected temperature, or the default if none is set.
+ */
+const getTemperature = (): number => {
+    try {
+        const storedTemp = localStorage.getItem(GEMINI_TEMPERATURE_STORAGE_KEY);
+        if (storedTemp) {
+            const parsedTemp = parseFloat(storedTemp);
+            if (!isNaN(parsedTemp)) return parsedTemp;
+        }
+        return DEFAULT_GEMINI_TEMPERATURE;
+    } catch (e) {
+        console.error("Could not access localStorage for temperature", e);
+        return DEFAULT_GEMINI_TEMPERATURE;
     }
 };
 
@@ -127,6 +188,7 @@ export const createRequirementChat = (history?: RequirementChatMessage[]): Chat 
     history: geminiHistory,
     config: {
       systemInstruction,
+      temperature: getTemperature(),
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -158,11 +220,10 @@ export const continueRequirementChat = async (
             throw new Error("Invalid JSON structure from AI.");
         }
     } catch (error) {
-        console.error("Gemini Chat Error or JSON parse error:", error);
-        const userFriendlyError = "I'm sorry, but I encountered an issue communicating with the AI. This could be a temporary problem with the API or your API key. Please try again. If the problem persists, the AI's response might be in an unexpected format.";
+        const errorMessage = handleGeminiError(error, 'AI Chat');
         return {
             flag: 'error',
-            content: userFriendlyError
+            content: errorMessage,
         };
     }
 }
@@ -183,6 +244,7 @@ ${spec}
             model: getModel(),
             contents: prompt,
             config: {
+                temperature: getTemperature(),
                 responseMimeType: 'application/json',
                 responseSchema: {
                     type: Type.OBJECT,
@@ -199,8 +261,7 @@ ${spec}
         
         return JSON.parse(response.text) as PreDevAnalysis;
     } catch (error) {
-        console.error("Gemini API Error:", error);
-        return `Error generating pre-dev analysis: ${error instanceof Error ? error.message : String(error)}`;
+        return handleGeminiError(error, 'Pre-Dev Analysis');
     }
 };
 
@@ -220,6 +281,7 @@ ${spec}
             model: getModel(),
             contents: prompt,
             config: {
+                temperature: getTemperature(),
                 responseMimeType: 'application/json',
                 responseSchema: {
                     type: Type.ARRAY,
@@ -244,8 +306,7 @@ ${spec}
         }));
 
     } catch (error) {
-        console.error("Gemini API Error:", error);
-        return `Error generating test cases: ${error instanceof Error ? error.message : String(error)}`;
+        return handleGeminiError(error, 'Test Cases');
     }
 };
 
@@ -267,12 +328,14 @@ Return only the title text, with no extra formatting, quotation marks, or labels
         const response = await ai.models.generateContent({
             model: getModel(),
             contents: prompt,
+            config: {
+                temperature: getTemperature(),
+            },
         });
         
         // Trim and remove any potential surrounding quotes.
         return response.text.trim().replace(/^"|"$/g, '');
     } catch (error) {
-        console.error("Gemini API Error (generateTitle):", error);
-        return `Error generating title: ${error instanceof Error ? error.message : String(error)}`;
+        return handleGeminiError(error, 'Title Generation');
     }
 };

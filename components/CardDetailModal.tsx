@@ -240,8 +240,8 @@ ${localCard.testCases.length > 0 ? localCard.testCases.map((tc, i) => `
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-slate-50 rounded-xl shadow-2xl w-full max-w-7xl h-[95vh] flex flex-col overflow-hidden border border-slate-300" onClick={e => e.stopPropagation()}>
-        <header className="p-4 border-b border-slate-200 flex-shrink-0 bg-white">
+      <div className="bg-white rounded-2xl shadow-modal w-full max-w-7xl h-[95vh] flex flex-col overflow-hidden border border-slate-300/80" onClick={e => e.stopPropagation()}>
+        <header className="px-6 py-4 border-b border-slate-200/80 flex-shrink-0 bg-white">
           <div className="flex justify-between items-start gap-4">
             <div className="flex-grow min-w-0">
                <div className="relative">
@@ -249,7 +249,7 @@ ${localCard.testCases.length > 0 ? localCard.testCases.map((tc, i) => `
                     type="text"
                     value={localCard.title}
                     onChange={e => handleFieldChange({ title: e.target.value })}
-                    className="text-xl font-bold text-slate-900 bg-transparent focus:outline-none focus:ring-1 focus:ring-sky-500 rounded-md px-2 py-1 w-full pr-10"
+                    className="text-2xl font-bold text-slate-900 bg-transparent focus:outline-none focus:ring-1 focus:ring-sky-500 rounded-md px-2 py-1 w-full pr-10"
                     placeholder="Card Title"
                  />
                  <div className="absolute inset-y-0 right-0 flex items-center pr-2">
@@ -317,7 +317,7 @@ ${localCard.testCases.length > 0 ? localCard.testCases.map((tc, i) => `
                 <button
                     onClick={handleManualSave}
                     disabled={!hasUnsavedChanges || saveStatus === 'saving'}
-                    className="flex items-center gap-2 px-4 py-2 text-sm bg-sky-600 text-white font-semibold rounded-lg shadow-sm hover:bg-sky-700 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-4 py-2 text-sm bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-700 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
                 >
                     <ArrowDownTrayIcon className="w-5 h-5" />
                     <span>Save Changes</span>
@@ -336,9 +336,9 @@ ${localCard.testCases.length > 0 ? localCard.testCases.map((tc, i) => `
           </div>
         </header>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden bg-slate-50">
           <div className="flex-1 flex flex-col overflow-y-auto">
-            <div className="px-6 border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+            <div className="px-6 border-b border-slate-200/80 bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10">
                 <nav className="flex items-center gap-2 -mb-px">
                 {TABS.map(tab => (
                     <TabButton key={tab} label={tab} isActive={activeTab === tab} onClick={() => setActiveTab(tab)} />

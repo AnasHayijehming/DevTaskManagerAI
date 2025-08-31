@@ -17,6 +17,11 @@
               'status-inprogress': '#f59e0b', // amber-500
               'status-done': '#10b981', // emerald-500
             },
+            boxShadow: {
+              'card': '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)',
+              'card-hover': '0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07)',
+              'modal': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+            },
             keyframes: {
               'shine': {
                 '0%': { backgroundPosition: '-200% 0' },
@@ -36,6 +41,26 @@
       }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+      @import url('https://rsms.me/inter/inter.css');
+      html { font-family: 'Inter', sans-serif; }
+      @supports (font-variation-settings: normal) {
+        html { font-family: 'Inter var', sans-serif; }
+      }
+      @keyframes pulse-ring {
+        0% {
+          box-shadow: 0 0 0 0px rgba(14, 165, 233, 0.5);
+        }
+        100% {
+          box-shadow: 0 0 0 4px rgba(14, 165, 233, 0);
+        }
+      }
+      .highlight-focus {
+        border-color: #0ea5e9; /* tailwind sky-500 */
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.4);
+        animation: pulse-ring 1.2s ease-out;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {
@@ -50,7 +75,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 text-slate-900">
+  <body class="bg-slate-100 text-slate-800">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

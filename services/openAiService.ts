@@ -6,6 +6,31 @@ import { AiChatResponse } from './geminiService';
 
 const API_URL = 'https://api.openai.com/v1/chat/completions';
 
+// Define temperature constants directly here
+export const OPENAI_TEMPERATURE_STORAGE_KEY = 'openai_temperature';
+export const DEFAULT_OPENAI_TEMPERATURE = 0.7;
+
+/**
+ * Creates a user-friendly error message from an OpenAI API error.
+ * @param {unknown} error - The error caught from the API call.
+ * @param {string} context - The context of the action (e.g., 'AI Chat').
+ * @returns {string} A user-friendly error message.
+ */
+function handleOpenAiError(error: unknown, context: string): string {
+    console.error(`OpenAI API Error in ${context}:`, error);
+
+    if (error instanceof SyntaxError) {
+        return `Error in ${context}: The AI's response was not in the expected format (invalid JSON). Please try again.`;
+    }
+
+    if (error instanceof Error) {
+        // Messages are already user-friendly from callOpenAiApi
+        return `Error in ${context}: ${error.message}`;
+    }
+    
+    return `An unknown error occurred in ${context}.`;
+}
+
 const getApiKey = (): string | null => {
     try {
         return localStorage.getItem(OPENAI_API_KEY_STORAGE_KEY);
@@ -21,6 +46,20 @@ const getModel = (): string => {
     } catch (e) {
         console.error("Could not access localStorage", e);
         return DEFAULT_OPENAI_MODEL;
+    }
+};
+
+const getTemperature = (): number => {
+    try {
+        const storedTemp = localStorage.getItem(OPENAI_TEMPERATURE_STORAGE_KEY);
+        if (storedTemp) {
+            const parsedTemp = parseFloat(storedTemp);
+            if (!isNaN(parsedTemp)) return parsedTemp;
+        }
+        return DEFAULT_OPENAI_TEMPERATURE;
+    } catch (e) {
+        console.error("Could not access localStorage for temperature", e);
+        return DEFAULT_OPENAI_TEMPERATURE;
     }
 };
 
@@ -41,35 +80,56 @@ type OpenAiMessage = {
 const callOpenAiApi = async (messages: OpenAiMessage[], useJsonFormat: boolean = false): Promise<string> => {
     const apiKey = getApiKey();
     if (!apiKey) {
-        throw new Error("OpenAI API Key not set.");
+        throw new Error("API Key not set. Please set it in Settings.");
     }
 
     const body: any = {
         model: getModel(),
         messages: messages,
+        temperature: getTemperature(),
     };
 
     if (useJsonFormat) {
         body.response_format = { type: "json_object" };
     }
 
-    const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(body)
-    });
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(body)
+        });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error("OpenAI API Error:", errorData);
-        throw new Error(`OpenAI API request failed: ${errorData.error?.message || response.statusText}`);
+        if (!response.ok) {
+            let errorText = `Request failed with status ${response.status}.`;
+            try {
+                const errorData = await response.json();
+                errorText = errorData.error?.message || JSON.stringify(errorData);
+            } catch {
+                // Not a JSON response, the text body might be useful
+                errorText = await response.text();
+            }
+            
+            switch (response.status) {
+                case 401: throw new Error(`Invalid Authentication: Your OpenAI API key is incorrect or has expired.`);
+                case 429: throw new Error(`Rate Limit Exceeded: You have exceeded your API quota. Please check your OpenAI account or try again later.`);
+                case 500: case 503: throw new Error(`Server Error: OpenAI's servers are currently unavailable. Please try again later.`);
+                default: throw new Error(errorText);
+            }
+        }
+
+        const data = await response.json();
+        return data.choices[0]?.message?.content || "";
+    } catch (error) {
+        if (error instanceof TypeError) { // Catches network errors
+            throw new Error("Network Error: Could not connect to the API. Please check your internet connection.");
+        }
+        // Re-throw errors from the response handling above so they can be caught by the handler
+        throw error;
     }
-
-    const data = await response.json();
-    return data.choices[0]?.message?.content || "";
 };
 
 const chatSystemInstruction = `You are an expert product manager and software engineer. Your goal is to help a developer clarify a requirement and turn it into a detailed technical specification.
@@ -129,11 +189,9 @@ export const continueRequirementChat = async (history: RequirementChatMessage[],
             throw new Error("Invalid JSON structure from AI.");
         }
     } catch (error) {
-        console.error("OpenAI Chat Error or JSON parse error:", error);
-        const userFriendlyError = "I'm sorry, but I encountered an issue communicating with the AI. This could be a temporary problem with the API or your API key. Please try again.";
         return {
             flag: 'error',
-            content: userFriendlyError
+            content: handleOpenAiError(error, "AI Chat")
         };
     }
 };
@@ -149,8 +207,7 @@ export const generatePreDevAnalysis = async (spec: string): Promise<PreDevAnalys
         ], true);
         return JSON.parse(responseText) as PreDevAnalysis;
     } catch (error) {
-        console.error("OpenAI API Error:", error);
-        return `Error generating pre-dev analysis: ${error instanceof Error ? error.message : String(error)}`;
+        return handleOpenAiError(error, 'Pre-Dev Analysis');
     }
 };
 
@@ -171,8 +228,7 @@ export const generateTestCases = async (spec: string): Promise<TestCase[] | stri
             status: TestCaseStatus.Pending
         }));
     } catch (error) {
-        console.error("OpenAI API Error:", error);
-        return `Error generating test cases: ${error instanceof Error ? error.message : String(error)}`;
+        return handleOpenAiError(error, 'Test Cases');
     }
 };
 
@@ -187,7 +243,6 @@ export const generateTitle = async (requirement: string): Promise<string> => {
         ]);
         return responseText.trim().replace(/^"|"$/g, '');
     } catch (error) {
-        console.error("OpenAI API Error (generateTitle):", error);
-        return `Error generating title: ${error instanceof Error ? error.message : String(error)}`;
+        return handleOpenAiError(error, 'Title Generation');
     }
 };

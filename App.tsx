@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, addCard, updateCard, deleteCard } from './services/db';
@@ -21,8 +22,8 @@ const App: React.FC = () => {
   const cards = useLiveQuery(() => db.cards.toArray(), []);
   const tags = useLiveQuery(() => db.tags.toArray(), []);
 
-  const tagsMap = useMemo(() => {
-    if (!tags) return new Map<number, Tag>();
+  const tagsMap = useMemo<Map<number, Tag>>(() => {
+    if (!tags) return new Map();
     return new Map(tags.map(tag => [tag.id, tag]));
   }, [tags]);
 

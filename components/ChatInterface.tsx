@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { RequirementChatMessage } from '../types';
@@ -10,6 +8,7 @@ interface ChatInterfaceProps {
   isLoading: boolean;
   onSendMessage: (message: string) => Promise<void>;
   isChatActive: boolean;
+  shouldFocusInput?: boolean;
 }
 
 const markdownComponents = {
@@ -26,9 +25,10 @@ const markdownComponents = {
   }
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ history, isLoading, onSendMessage, isChatActive }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ history, isLoading, onSendMessage, isChatActive, shouldFocusInput }) => {
     const [userResponse, setUserResponse] = useState('');
     const chatContainerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -45,9 +45,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ history, isLoading, onSen
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     }, [history, isLoading]);
+    
+    // Auto-focus and highlight input when AI asks a question
+    useEffect(() => {
+        if (shouldFocusInput && inputRef.current) {
+            const input = inputRef.current;
+            input.focus();
+            input.classList.add('highlight-focus');
+            
+            const timer = setTimeout(() => {
+                input.classList.remove('highlight-focus');
+            }, 1200); // Corresponds to animation duration
+            
+            return () => {
+                clearTimeout(timer);
+                // Ensure class is removed on cleanup
+                input.classList.remove('highlight-focus');
+            };
+        }
+    }, [shouldFocusInput]);
+
 
     return (
-        <div className="p-2 border border-slate-200 rounded-lg bg-white flex flex-col justify-between flex-grow min-h-0">
+        <div className="p-2 border border-slate-200/80 rounded-lg bg-slate-100/70 flex flex-col justify-between flex-grow min-h-0">
             <div ref={chatContainerRef} className="overflow-y-auto space-y-4 p-3 flex-grow flex flex-col">
                 {history.length === 0 && !isLoading && (
                     <div className="flex h-full min-h-[100px] items-center justify-center text-center text-slate-500 px-4">
@@ -67,10 +87,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ history, isLoading, onSen
                     }
 
                     const messageBubbleClasses = isUser
-                        ? 'bg-sky-500 text-white'
+                        ? 'bg-blue-600 text-white'
                         : msg.isError
                             ? 'bg-red-100 text-red-900 border border-red-200'
-                            : 'bg-slate-100 text-slate-800';
+                            : 'bg-white text-slate-800 border border-slate-200/90';
                     
                     const messageBorderRadius = isUser 
                         ? 'rounded-t-xl rounded-bl-xl'
@@ -88,7 +108,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ history, isLoading, onSen
                 })}
                 {isLoading && (
                      <div className="flex flex-col max-w-[90%] self-start items-start">
-                         <div className="px-3 py-2 rounded-t-xl rounded-br-xl text-sm bg-slate-100 text-slate-800">
+                         <div className="px-3 py-2 rounded-t-xl rounded-br-xl text-sm bg-white border border-slate-200/90 text-slate-800">
                               <div className="flex items-center justify-center gap-1.5 h-5">
                                   <span className="h-1.5 w-1.5 bg-slate-400 rounded-full animate-pulse [animation-delay:-0.3s]"></span>
                                   <span className="h-1.5 w-1.5 bg-slate-400 rounded-full animate-pulse [animation-delay:-0.15s]"></span>
@@ -99,16 +119,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ history, isLoading, onSen
                 )}
             </div>
             {isChatActive && !isLoading && (
-                <form onSubmit={handleSubmit} className="flex gap-2 items-start pt-2 border-t border-slate-200 mt-2">
+                <form onSubmit={handleSubmit} className="flex gap-2 items-start pt-2 border-t border-slate-200/80 mt-2">
                     <textarea 
+                        ref={inputRef}
                         value={userResponse}
                         onChange={e => setUserResponse(e.target.value)}
-                        className="flex-grow p-2 bg-white border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-sky-500 text-sm"
+                        className="flex-grow p-2 bg-white border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-sky-500 text-sm transition-colors duration-300"
                         placeholder="Your answer..."
                         rows={2}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e) }}
                     />
-                    <button type="submit" className="px-3 py-1.5 bg-white text-slate-700 border border-slate-300 font-semibold rounded-lg shadow-sm hover:bg-slate-100 transition-colors text-sm">
+                    <button type="submit" className="px-3 py-1.5 bg-white text-slate-700 border border-slate-300 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors text-sm">
                         Send
                     </button>
                 </form>

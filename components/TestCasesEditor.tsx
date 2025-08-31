@@ -86,7 +86,7 @@ const TestCasesEditor: React.FC<TestCasesEditorProps> = ({ testCases, onChange }
     };
   
     const renderHeader = (label: string, field: keyof ViewModes) => (
-        <th scope="col" className="px-4 py-3 w-3/12">
+        <th scope="col" className="px-6 py-3 w-3/12">
             <div className="flex justify-between items-center">
                 <span>{label}</span>
                 <EditPreviewToggle 
@@ -101,30 +101,30 @@ const TestCasesEditor: React.FC<TestCasesEditorProps> = ({ testCases, onChange }
         <div className="space-y-4">
         <div className="overflow-x-auto bg-white rounded-lg border border-slate-200">
                 <table className="w-full min-w-[800px] text-sm text-left text-slate-600">
-                    <thead className="text-xs text-slate-700 uppercase bg-slate-100">
+                    <thead className="text-xs text-slate-700 uppercase bg-slate-50">
                         <tr>
-                            <th scope="col" className="px-4 py-3 w-1/12">ID</th>
+                            <th scope="col" className="px-6 py-3 w-1/12">ID</th>
                             {renderHeader('Description', 'description')}
                             {renderHeader('Input', 'input')}
                             {renderHeader('Expected Result', 'expectedResult')}
-                            <th scope="col" className="px-4 py-3 w-1/12">Status</th>
-                            <th scope="col" className="px-4 py-3 w-1/12">Actions</th>
+                            <th scope="col" className="px-6 py-3 w-1/12">Status</th>
+                            <th scope="col" className="px-6 py-3 w-1/12">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {testCases.map((tc, index) => (
-                            <tr key={tc.id} className="bg-white border-b border-slate-200 last:border-b-0 hover:bg-slate-50">
-                                <td className="px-4 py-2 font-medium text-slate-900">{index + 1}</td>
-                                <td className="px-4 py-2">
+                            <tr key={tc.id} className="border-b border-slate-200/80 last:border-b-0 hover:bg-sky-50/50 odd:bg-white even:bg-slate-50/70">
+                                <td className="px-6 py-4 font-medium text-slate-900">{index + 1}</td>
+                                <td className="px-6 py-4">
                                     {renderCell(tc, 'description')}
                                 </td>
-                                <td className="px-4 py-2">
+                                <td className="px-6 py-4">
                                     {renderCell(tc, 'input')}
                                 </td>
-                                <td className="px-4 py-2">
+                                <td className="px-6 py-4">
                                     {renderCell(tc, 'expectedResult')}
                                 </td>
-                                <td className="px-4 py-2">
+                                <td className="px-6 py-4">
                                     <select 
                                         value={tc.status} 
                                         onChange={e => handleUpdateTestCase(tc.id, 'status', e.target.value)}
@@ -133,7 +133,7 @@ const TestCasesEditor: React.FC<TestCasesEditorProps> = ({ testCases, onChange }
                                         {Object.values(TestCaseStatus).map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </td>
-                                <td className="px-4 py-2 text-center">
+                                <td className="px-6 py-4 text-center">
                                     <button onClick={() => handleDeleteTestCase(tc.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-100 rounded-full">
                                         <TrashIcon className="w-4 h-4"/>
                                     </button>

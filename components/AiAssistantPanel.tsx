@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../services/db';
-import { continueRequirementChat, isApiKeyAvailable, generatePreDevAnalysis, generateTestCases } from '../services/aiService';
+import { continueRequirementChat, isApiKeyAvailable } from '../services/aiService';
 import { DevTaskCard, DevTaskCardData, RequirementChatMessage } from '../types';
 import { useAiProvider } from '../hooks/useAiProvider';
 import AiButton from './AiButton';
@@ -11,6 +10,7 @@ import ChatInterface from './ChatInterface';
 import Spinner from './Spinner';
 import Tooltip from './Tooltip';
 import ProcessIndicator from './ProcessIndicator';
+import { generatePreDevAnalysis, generateTestCases } from '../services/aiService';
 
 interface AiAssistantPanelProps {
   activeTab: string;
@@ -24,6 +24,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
   const [isChatLoading, setChatLoading] = useState(false);
   const [keyAvailable, setKeyAvailable] = useState(isApiKeyAvailable());
   const [provider] = useAiProvider();
+  const [shouldFocusInput, setShouldFocusInput] = useState(false);
 
   const allKnowledgeFiles = useLiveQuery(() => db.knowledgeFiles.toArray(), []);
   
@@ -31,6 +32,14 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
   useEffect(() => {
     setKeyAvailable(isApiKeyAvailable());
   }, [cardData.id, provider]);
+
+  // Reset focus trigger to allow it to be re-fired
+  useEffect(() => {
+    if (shouldFocusInput) {
+        const timer = setTimeout(() => setShouldFocusInput(false), 100);
+        return () => clearTimeout(timer);
+    }
+  }, [shouldFocusInput]);
 
   const isSpecGenerated = (cardData.requirementChatHistory || []).some(
     msg => msg.role === 'model' && msg.text.includes('**Specification Generated**')
@@ -40,7 +49,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
 
   if (!keyAvailable) {
     return (
-        <aside className="w-96 flex-shrink-0 border-l border-slate-200 bg-white p-4 flex flex-col gap-4">
+        <aside className="w-96 flex-shrink-0 border-l border-slate-200/80 bg-white p-4 flex flex-col gap-4">
             <h3 className="text-lg font-semibold text-slate-800 text-center mb-0 flex-shrink-0">AI Assistant</h3>
             <div className="flex flex-col items-center justify-center text-center h-full gap-4 p-6 bg-amber-50 rounded-xl border border-amber-200">
                 <div className="p-3 bg-white rounded-full border border-slate-200 shadow-sm">
@@ -101,6 +110,8 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
         if (response.flag === 'answer') {
             onUpdate({ spec: response.content });
             newMessages.push({ role: 'model', text: `**Specification Generated**` });
+        } else if (response.flag === 'question') {
+            setShouldFocusInput(true);
         }
         onUpdate({ requirementChatHistory: [...initialHistory, ...newMessages] });
 
@@ -128,6 +139,8 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
         if (response.flag === 'answer') {
             onUpdate({ spec: response.content });
             modelMessages.push({ role: 'model', text: `**Specification Generated**` });
+        } else if (response.flag === 'question') {
+            setShouldFocusInput(true);
         }
 
         const finalHistory = [...historyWithUserMessage, ...modelMessages];
@@ -189,7 +202,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
       isLoading?: boolean;
       disabled?: boolean;
   }) => (
-      <div className="flex flex-col items-center justify-center text-center h-full gap-4 p-6 bg-slate-100/80 rounded-xl border border-slate-200">
+      <div className="flex flex-col items-center justify-center text-center h-full gap-4 p-6 bg-slate-100/70 rounded-xl border border-slate-200/80">
           <div className="p-4 bg-gradient-to-br from-sky-100 to-indigo-100 rounded-full border border-slate-200 shadow-sm">
                <SparklesIcon className="w-8 h-8 text-sky-500" />
           </div>
@@ -213,7 +226,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
   );
   
   const InfoPanel = ({ text }: { text: string }) => (
-      <div className="flex flex-col items-center justify-center text-center h-full gap-4 p-6 bg-slate-100/80 rounded-xl border border-slate-200">
+      <div className="flex flex-col items-center justify-center text-center h-full gap-4 p-6 bg-slate-100/70 rounded-xl border border-slate-200/80">
           <div className="p-3 bg-white rounded-full border border-slate-200 shadow-sm">
                <InformationCircleIcon className="w-7 h-7 text-slate-500" />
           </div>
@@ -236,7 +249,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
     
     if(allKnowledgeFiles.length === 0) {
         return (
-            <div className="text-center p-4 text-sm text-slate-500 bg-slate-50 rounded-lg">
+            <div className="text-center p-4 text-sm text-slate-500 bg-slate-100/70 rounded-lg">
                 Your knowledge base is empty. Go to the Knowledge Base manager to upload files.
             </div>
         )
@@ -245,7 +258,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
     return (
         <div className="space-y-2">
             {allKnowledgeFiles.map(file => (
-                <label key={file.id} className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-100 cursor-pointer transition-colors duration-200 ${cardData.knowledgeFileIds?.includes(file.id) ? 'bg-sky-50 border-sky-300 ring-2 ring-sky-200' : 'bg-white border-slate-200'}`}>
+                <label key={file.id} className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-slate-100/70 cursor-pointer transition-colors duration-200 ${cardData.knowledgeFileIds?.includes(file.id) ? 'bg-sky-50 border-sky-300 ring-2 ring-sky-200' : 'bg-white border-slate-200/80'}`}>
                     <input 
                         type="checkbox"
                         checked={cardData.knowledgeFileIds?.includes(file.id) ?? false}
@@ -276,12 +289,13 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
                 </div>
               </Tooltip>
             </div>
-            {isChatLoading && (cardData.requirementChatHistory || []).length === 1 && <ProcessIndicator />}
+            {isChatLoading && (cardData.requirementChatHistory || []).length <= 1 && <ProcessIndicator />}
             <ChatInterface
               history={cardData.requirementChatHistory || []}
               isLoading={isChatLoading}
               onSendMessage={handleContinueChat}
               isChatActive={isChatActive}
+              shouldFocusInput={shouldFocusInput}
             />
           </div>
         );
@@ -319,7 +333,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
   };
 
   return (
-    <aside className="w-96 flex-shrink-0 border-l border-slate-200 bg-white p-4 flex flex-col gap-4">
+    <aside className="w-96 flex-shrink-0 border-l border-slate-200/80 bg-white p-4 flex flex-col gap-4">
       <h3 className="text-lg font-semibold text-slate-800 text-center mb-0 flex-shrink-0">AI Assistant</h3>
       <div className="flex-grow flex flex-col gap-4 min-h-0">
         
@@ -333,7 +347,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
             </div>
         </div>
 
-        <div className="w-full h-px bg-slate-200"></div>
+        <div className="w-full h-px bg-slate-200/80"></div>
 
         <div className="flex-grow flex flex-col min-h-0">
              {renderActionContent()}

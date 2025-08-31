@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { CopyIcon } from './icons/Icons';
@@ -33,12 +31,12 @@ const MarkdownPreviewTab: React.FC<MarkdownPreviewTabProps> = ({ markdownContent
       <div className="text-right mb-4">
         <button 
           onClick={copyMarkdown} 
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-800 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-200 transition-colors"
         >
           <CopyIcon/> Copy Markdown
         </button>
       </div>
-      <div className="prose prose-slate max-w-none p-6 border rounded-lg bg-white prose-pre:bg-slate-100 prose-pre:border prose-pre:rounded-md prose-th:bg-slate-50">
+      <div className="prose prose-slate max-w-none p-6 border rounded-lg bg-white prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-pre:border prose-pre:rounded-md prose-th:bg-slate-50">
         <ReactMarkdown components={markdownComponents}>{markdownContent}</ReactMarkdown>
       </div>
     </div>

@@ -17,10 +17,10 @@ const DevCard: React.FC<DevCardProps> = ({ card, onSelect, tags }) => {
   return (
     <div
       onClick={onSelect}
-      className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border-l-[5px] ${borderColorClass} ${hoverBgClass} overflow-hidden hover:-translate-y-1 flex flex-col`}
+      className={`bg-white rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300 cursor-pointer border-l-4 ${borderColorClass} ${hoverBgClass} overflow-hidden hover:-translate-y-1 flex flex-col`}
     >
       <div className="p-5 flex flex-col flex-grow">
-        <h3 className="text-md font-semibold text-slate-900 break-words w-full pr-2 mb-2">{card.title}</h3>
+        <h3 className="text-lg font-semibold text-slate-800 break-words w-full pr-2 mb-2">{card.title}</h3>
         
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4">

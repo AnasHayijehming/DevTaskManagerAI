@@ -3,8 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, addTag, deleteTag } from '../services/db';
 import { useApiKey } from '../hooks/useApiKey';
 import { useModelSettings } from '../hooks/useModelSettings';
+import { useGeminiTemperature } from '../hooks/useGeminiTemperature';
 import { useOpenAiApiKey } from '../hooks/useOpenAiApiKey';
 import { useOpenAiModelSettings } from '../hooks/useOpenAiModelSettings';
+import { useOpenAiTemperature } from '../hooks/useOpenAiTemperature';
 import { useAiProvider, AiProvider } from '../hooks/useAiProvider';
 import { TAG_COLORS, TAG_COLOR_CLASSES, GEMINI_MODELS, OPENAI_MODELS } from '../constants';
 import { XMarkIcon, TrashIcon, KeyIcon, TagIcon, EyeIcon, EyeSlashIcon, CpuChipIcon } from './icons/Icons';
@@ -21,9 +23,11 @@ const ApiKeyAndModelSettings: React.FC = () => {
 
   const [geminiApiKey, saveGeminiApiKey] = useApiKey();
   const [geminiModel, saveGeminiModel] = useModelSettings();
+  const [geminiTemperature, saveGeminiTemperature] = useGeminiTemperature();
   
   const [openAiApiKey, saveOpenAiApiKey] = useOpenAiApiKey();
   const [openAiModel, saveOpenAiModel] = useOpenAiModelSettings();
+  const [openAiTemperature, saveOpenAiTemperature] = useOpenAiTemperature();
 
   const [geminiInputValue, setGeminiInputValue] = useState(geminiApiKey);
   const [openAiInputValue, setOpenAiInputValue] = useState(openAiApiKey);
@@ -43,6 +47,35 @@ const ApiKeyAndModelSettings: React.FC = () => {
     setTimeout(() => setSaveFeedback(''), 2000);
   };
   
+  const TemperatureSlider: React.FC<{
+    label: string;
+    description: string;
+    value: number;
+    onChange: (value: number) => void;
+    min?: number;
+    max?: number;
+    step?: number;
+  }> = ({ label, description, value, onChange, min = 0, max = 1, step = 0.1 }) => (
+    <div>
+        <h4 className="text-lg font-semibold text-slate-800 mb-2">{label}</h4>
+        <p className="text-slate-600 mb-3 text-sm">{description}</p>
+        <div className="flex items-center gap-4 max-w-sm">
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value}
+                onChange={e => onChange(parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+            />
+            <span className="font-mono text-sm font-semibold text-slate-700 bg-slate-100 rounded-md px-2 py-1 w-16 text-center">
+                {value.toFixed(1)}
+            </span>
+        </div>
+    </div>
+  );
+
   return (
     <div>
         <div className="mb-8">
@@ -105,6 +138,16 @@ const ApiKeyAndModelSettings: React.FC = () => {
                         ))}
                     </fieldset>
                 </div>
+
+                <div className="w-full h-px bg-slate-200 my-8"></div>
+          
+                <TemperatureSlider
+                    label="Creativity (Temperature)"
+                    description="Controls randomness. Lower values (e.g., 0.2) are more deterministic, while higher values (e.g., 0.9) are more creative."
+                    value={geminiTemperature}
+                    onChange={saveGeminiTemperature}
+                    max={1.0}
+                />
             </div>
         )}
 
@@ -143,16 +186,72 @@ const ApiKeyAndModelSettings: React.FC = () => {
                         ))}
                     </fieldset>
                 </div>
+
+                <div className="w-full h-px bg-slate-200 my-8"></div>
+
+                <TemperatureSlider
+                    label="Creativity (Temperature)"
+                    description="Controls randomness. Lower values (e.g., 0.2) are more deterministic, while higher values (e.g., 2.0) are more creative."
+                    value={openAiTemperature}
+                    onChange={saveOpenAiTemperature}
+                    max={2.0}
+                />
             </div>
         )}
         <style>{`
-          .btn-primary { @apply px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-900 transition-colors; }
+          .btn-primary { @apply px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-700 transition-colors; }
           .input-field { @apply px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500; }
           .radio-input { @apply text-sky-600 focus:ring-sky-500 border-slate-400; }
-          .active-selection { @apply bg-sky-50 border-sky-300 ring-2 ring-sky-200; }
-          .inactive-selection { @apply bg-white border-slate-200 hover:bg-slate-50; }
+          .active-selection { @apply bg-sky-50 border-sky-400 ring-2 ring-sky-300/50; }
+          .inactive-selection { @apply bg-white border-slate-300 hover:bg-slate-100/80 hover:border-slate-400; }
           .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
           @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+          
+          input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+          }
+          input[type=range]:focus {
+            outline: none;
+          }
+          input[type=range]::-webkit-slider-runnable-track {
+            height: 8px;
+            background: #e2e8f0; /* slate-200 */
+            border-radius: 4px;
+          }
+          input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -4px;
+            height: 16px;
+            width: 16px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            border: 2px solid #0ea5e9; /* sky-500 */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+          input[type=range]:focus::-webkit-slider-thumb {
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.4);
+          }
+          input[type=range]::-moz-range-track {
+            height: 8px;
+            background: #e2e8f0; /* slate-200 */
+            border-radius: 4px;
+          }
+          input[type=range]::-moz-range-thumb {
+            height: 16px;
+            width: 16px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            border: 2px solid #0ea5e9; /* sky-500 */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+          input[type=range]:focus::-moz-range-thumb {
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.4);
+          }
         `}</style>
     </div>
   );
@@ -197,7 +296,7 @@ const TagManagementSettings: React.FC = () => {
                     className="flex-grow px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500"
                     maxLength={25}
                     />
-                    <button type="submit" className="px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-900 transition-colors">
+                    <button type="submit" className="px-4 py-2 bg-slate-800 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-700 transition-colors">
                     Add Tag
                     </button>
                 </div>
@@ -217,7 +316,7 @@ const TagManagementSettings: React.FC = () => {
                 {tags && tags.length > 0 ? tags.map(tag => {
                 const colorClasses = TAG_COLOR_CLASSES[tag.color] || TAG_COLOR_CLASSES.slate;
                 return (
-                    <span key={tag.id} className={`inline-flex items-center font-medium rounded-full whitespace-nowrap text-sm px-2.5 py-1 ${colorClasses.bg} ${colorClasses.text}`}>
+                    <span key={tag.id} className={`inline-flex items-center font-medium rounded-full whitespace-nowrap text-xs px-2.5 py-1 ${colorClasses.bg} ${colorClasses.text}`}>
                     {tag.name}
                     <button
                         onClick={() => handleDeleteTag(tag.id!)}
@@ -251,7 +350,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, initialTab = 'ap
 
     return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-modal w-full max-w-4xl h-[80vh] flex" onClick={e => e.stopPropagation()}>
         <aside className="w-1/4 border-r border-slate-200 p-4 bg-slate-50/50 rounded-l-lg">
             <h2 className="text-lg font-bold text-slate-800 mb-6 px-2">Settings</h2>
             <nav className="flex flex-col gap-1">
