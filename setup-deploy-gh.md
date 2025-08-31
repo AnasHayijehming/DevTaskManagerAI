@@ -12,7 +12,6 @@
 git branch -D gh-pages
 # Create new gh-pages branch
 git checkout -b gh-pages
-git checkout main  # Switch back to main branch
 ```
 
 ### 2. Install required dependencies
@@ -23,28 +22,21 @@ npm install --save-dev @vitejs/plugin-react
 
 ### 3. Configure package.json
 Add the following to your `package.json`:
-
 ```json
-{
-  "homepage": "https://anashayijehming.github.io/DevTaskManagerAI",
-  "scripts": {
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
-  }
-}
+"homepage": "https://anashayijehming.github.io/DevTaskManagerAI"
+```
+
+Add these scripts to your existing scripts section:
+```json
+"predeploy": "npm run build",
+"deploy": "gh-pages -d dist"
 ```
 
 ### 4. Configure vite.config.js
-Update your `vite.config.js`:
-
-```javascript
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-
-export default defineConfig({
-  base: '/DevTaskManagerAI/',
-  plugins: [react()],
-})
+Add the following to your existing `vite.config.js`:
+  - add import { defineConfig } from 'vite'
+  - add base: '/DevTaskManagerAI/'
+  - add plugins: [react()]
 ```
 
 ### 5. Deploy to GitHub Pages
