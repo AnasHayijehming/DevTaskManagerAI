@@ -5,19 +5,35 @@ import { MODEL_STORAGE_KEY } from '../hooks/useModelSettings';
 import { DEFAULT_MODEL } from '../constants';
 
 
+let aiClient: GoogleGenAI | null = null;
+let lastUsedApiKey: string | null = null;
+
 /**
- * Retrieves the AI client instance, configured with the API key from local storage.
+ * Retrieves a cached AI client instance, configured with the API key from local storage.
+ * The client is re-initialized only if the API key changes.
  * @returns {GoogleGenAI | null} An initialized GoogleGenAI client or null if the API key is not found.
  */
 const getAiClient = (): GoogleGenAI | null => {
     try {
         const apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+
         if (!apiKey) {
+            aiClient = null;
+            lastUsedApiKey = null;
             return null;
         }
-        return new GoogleGenAI({ apiKey });
+
+        // Re-initialize only if API key is different from the one used to create the current client
+        if (apiKey !== lastUsedApiKey) {
+            aiClient = new GoogleGenAI({ apiKey });
+            lastUsedApiKey = apiKey;
+        }
+        
+        return aiClient;
     } catch (e) {
         console.error("Could not access localStorage or initialize AI client", e);
+        aiClient = null;
+        lastUsedApiKey = null;
         return null;
     }
 };
