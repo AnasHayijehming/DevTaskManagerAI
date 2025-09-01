@@ -91,7 +91,7 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
   };
 
   const handleStartChat = async () => {
-    if (!cardData.requirement) {
+    if (!cardData.requirement.trim()) {
       alert("Please fill in the requirement first.");
       return;
     }
@@ -153,6 +153,51 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
         onUpdate({ requirementChatHistory: historyWithError });
     } finally {
         setChatLoading(false);
+    }
+  };
+  
+  const handleRegenerateSpec = async () => {
+    if (!cardData.requirement.trim()) {
+      alert("The requirement field is empty. Please write a requirement before re-generating the spec.");
+      return;
+    }
+    if (!window.confirm("This will replace the current specification and clear the chat history. Are you sure you want to proceed?")) {
+      return;
+    }
+
+    setAiLoading(prev => ({ ...prev, regenerateSpec: true }));
+
+    const regenerationPrompt = `Please generate a new, comprehensive technical specification based *only* on the following requirement. Do not ask any clarifying questions; proceed directly to generating the spec. Requirement: "${cardData.requirement}"`;
+    const initialHistoryForDisplay: RequirementChatMessage[] = [{ role: 'user', text: cardData.requirement }];
+
+    try {
+        const augmentedPrompt = await augmentPromptWithContext(regenerationPrompt);
+        // Start a "new" chat by passing an empty history to the AI service
+        const response = await continueRequirementChat([], augmentedPrompt);
+
+        const modelMessages: RequirementChatMessage[] = [];
+        let newSpec = cardData.spec; // Keep old spec in case of error
+
+        if (response.flag === 'answer') {
+            newSpec = response.content;
+            modelMessages.push({ role: 'model', text: response.content });
+            modelMessages.push({ role: 'model', text: `**Specification Generated**` });
+        } else if (response.flag === 'question') {
+            // AI ignored our prompt, but handle it gracefully by starting a new chat
+            modelMessages.push({ role: 'model', text: response.content });
+            setShouldFocusInput(true);
+        } else { // error
+             modelMessages.push({ role: 'model', text: response.content, isError: true });
+        }
+        
+        onUpdate({ spec: newSpec, requirementChatHistory: [...initialHistoryForDisplay, ...modelMessages] });
+
+    } catch (e) {
+        console.error("Error regenerating spec:", e);
+        const errorMessage: RequirementChatMessage = { role: 'model', text: "An unexpected error occurred during re-generation. Please try again.", isError: true };
+        onUpdate({ requirementChatHistory: [...initialHistoryForDisplay, errorMessage] });
+    } finally {
+        setAiLoading(prev => ({ ...prev, regenerateSpec: false }));
     }
   };
   
@@ -278,21 +323,37 @@ const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ activeTab, cardData
         return (
           <div className="flex flex-col flex-grow min-h-0 gap-2">
             <div className="flex justify-center flex-shrink-0">
-              <Tooltip text="Starts an interactive chat with the AI to refine your requirement and then generates a detailed technical specification.">
-                <div>
-                  <AiButton 
-                    text="Clarify & Generate Spec" 
-                    onClick={handleStartChat} 
-                    isLoading={isChatLoading} 
-                    disabled={isChatActive || isSpecGenerated}
-                  />
-                </div>
-              </Tooltip>
+              {isSpecGenerated ? (
+                  <Tooltip text="Generates a new spec based on the current requirement. This will replace the existing spec and chat history.">
+                      <div>
+                          <AiButton
+                              text="Re-generate Spec"
+                              onClick={handleRegenerateSpec}
+                              isLoading={isAiLoading['regenerateSpec']}
+                              disabled={!cardData.requirement.trim()}
+                              variant="secondary"
+                          />
+                      </div>
+                  </Tooltip>
+              ) : (
+                  <Tooltip text="Starts an interactive chat with the AI to refine your requirement and then generates a detailed technical specification.">
+                      <div>
+                          <AiButton 
+                              text="Clarify & Generate Spec" 
+                              onClick={handleStartChat} 
+                              isLoading={isChatLoading} 
+                              disabled={isChatActive || !cardData.requirement.trim()}
+                          />
+                      </div>
+                  </Tooltip>
+              )}
             </div>
+
             {isChatLoading && (cardData.requirementChatHistory || []).length <= 1 && <ProcessIndicator />}
+            
             <ChatInterface
               history={cardData.requirementChatHistory || []}
-              isLoading={isChatLoading}
+              isLoading={isChatLoading && !isAiLoading['regenerateSpec']}
               onSendMessage={handleContinueChat}
               isChatActive={isChatActive}
               shouldFocusInput={shouldFocusInput}
